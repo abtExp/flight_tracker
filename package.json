@@ -1,7 +1,7 @@
 {
   "name": "flight-tracker",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.344.0",
     "pdfjs-dist": "^5.4.530",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

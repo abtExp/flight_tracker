@@ -18,27 +18,50 @@ export const parsePDFBoardingPass = async (file) => {
 
         // Basic Regex Extraction (Best Effort)
         // This is highly dependent on airline PDF formats
-        const pnrMatch = fullText.match(/PNR:?\s*([A-Z0-9]{6})/i) || fullText.match(/Booking Ref:?\s*([A-Z0-9]{6})/i);
-        const flightMatch = fullText.match(/([A-Z]{2})\s?(\d{3,4})/);
+
+        // PNR: 5-8 alphanumeric characters, usually uppercase
+        const pnrMatch = fullText.match(/PNR:?\s*([A-Z0-9]{5,8})/i) ||
+            fullText.match(/Booking Ref:?\s*([A-Z0-9]{5,8})/i) ||
+            fullText.match(/Reference:?\s*([A-Z0-9]{5,8})/i) ||
+            fullText.match(/([A-Z0-9]{6})/); // Fallback
+
+        // Flight Number: 2-3 letters followed by 1-4 digits
+        const flightMatch = fullText.match(/([A-Z]{2}|[A-Z0-9]{2})\s?(\d{3,4})/);
+
         const seatMatch = fullText.match(/Seat:?\s*([0-9]{1,2}[A-Z])/i);
 
-        // Extract passenger name (often first line or near "Passenger")
-        // Very naive implementation
-        const passengerMatch = fullText.match(/Passenger:?\s*([A-Z\s]+)/i);
+        // Date Extraction (DD MMM or DD/MM/YYYY)
+        const dateMatch = fullText.match(/(\d{1,2})\s?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s?(\d{2,4})?/i) ||
+            fullText.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/) ||
+            fullText.match(/(\d{4})-(\d{2})-(\d{2})/);
 
-        if (!flightMatch) return null;
+        let flightDate = new Date();
+        if (dateMatch) {
+            try {
+                flightDate = new Date(dateMatch[0]);
+                if (isNaN(flightDate.getTime())) flightDate = new Date();
+            } catch (e) { }
+        }
+
+        // Extract passenger name (often first line or near "Passenger")
+        const passengerMatch = fullText.match(/Passenger:?\s*([A-Z\s]+)/i) || fullText.match(/Name:?\s*([A-Z\s]+)/i);
+
+        if (!flightMatch) {
+            console.warn("PDF Parse: No flight number found.");
+            return null;
+        }
 
         return {
             id: `pdf-${Date.now()}`,
             pnr: pnrMatch ? pnrMatch[1] : 'PDF-IMP',
-            airline: 'Imported', // Could infer from flight code
+            airline: 'Imported',
             flightNumber: `${flightMatch[1]} ${flightMatch[2]}`,
             departure: {
-                code: 'UNK', // Hard to extract reliably without structured parsing
+                code: 'UNK',
                 city: 'Unknown',
                 terminal: 'TBD',
                 gate: 'TBD',
-                time: new Date().toISOString(),
+                time: flightDate.toISOString(),
                 weather: 'sun',
                 temp: '--'
             },
@@ -46,7 +69,7 @@ export const parsePDFBoardingPass = async (file) => {
                 code: 'UNK',
                 city: 'Unknown',
                 terminal: 'TBD',
-                time: new Date(Date.now() + 7200000).toISOString(),
+                time: new Date(flightDate.getTime() + 7200000).toISOString(),
                 weather: 'sun',
                 temp: '--'
             },

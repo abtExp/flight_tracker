@@ -36,6 +36,31 @@ export const fetchFlights = async () => {
     }
 };
 
+export const fetchFlightStatus = async (airlineCode, flightNum, dateStr) => {
+    if (!AVIATIONSTACK_API_KEY || AVIATIONSTACK_API_KEY.includes('your_')) {
+        return null;
+    }
+
+    try {
+        // AviationStack format: flight_iata (e.g. AA100)
+        const flightIata = `${airlineCode}${flightNum}`;
+        const url = `${AVIATIONSTACK_BASE_URL}/flights?access_key=${AVIATIONSTACK_API_KEY}&flight_iata=${flightIata}&limit=1`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('API Error');
+
+        const data = await response.json();
+        if (!data.data || data.data.length === 0) return null;
+
+        const apiFlight = data.data[0];
+        return transformFlightData(apiFlight);
+
+    } catch (error) {
+        console.error("Error fetching specific flight status:", error);
+        return null;
+    }
+};
+
 export const fetchWeather = async (city) => {
     if (!OPENWEATHER_API_KEY || OPENWEATHER_API_KEY.includes('your_')) {
         // Return mock weather if no key

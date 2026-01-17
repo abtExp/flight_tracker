@@ -1,15 +1,27 @@
 import React from 'react';
-import { X, QrCode, Plane } from 'lucide-react';
+import { X, Plane } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { formatDate } from '../utils/helpers';
 
 const BoardingPassQRModal = ({ flight, onClose }) => {
     const { time: depTime, date: depDate } = formatDate(flight.departure.time);
+
+    // Construct BCBP-like string or JSON for the QR code
+    const qrData = JSON.stringify({
+        pnr: flight.pnr,
+        flight: flight.flightNumber,
+        date: flight.departure.time,
+        seat: flight.seat
+    });
+
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
             <div className="bg-white rounded-[2rem] overflow-hidden w-full max-w-sm shadow-2xl relative animate-in zoom-in-95 duration-300">
                 <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full hover:bg-gray-200 z-10"><X size={20} className="text-gray-600" /></button>
                 <div className="pt-12 pb-10 px-8 flex flex-col items-center bg-white">
-                    <div className="p-4 border-4 border-gray-900 rounded-3xl mb-4"><QrCode size={180} className="text-gray-900" /></div>
+                    <div className="p-4 border-4 border-gray-900 rounded-3xl mb-4">
+                        <QRCodeSVG value={qrData} size={180} level="M" />
+                    </div>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Scan at Gate</p>
                 </div>
                 <div className={`bg-gradient-to-br ${flight.brandGradient} p-8 text-white`}>
