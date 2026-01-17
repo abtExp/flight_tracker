@@ -1,0 +1,5 @@
+{
+  "appId": "com.flighttracker.app",
+  "appName": "flight-tracker",
+  "webDir": "dist"
+}
