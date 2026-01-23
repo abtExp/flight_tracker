@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Plane, RefreshCw, User, Ticket, History, Plus, Scan, FileText, CheckCircle
 } from 'lucide-react';
-import { fetchFlights, fetchWeather, fetchFlightStatus } from './services/api';
+import { fetchFlights, fetchWeather, fetchFlightStatus, fetchBooking } from './services/api';
 import { parseBoardingPass } from './utils/bcbp';
 import { parsePDFBoardingPass } from './utils/pdfParser';
 import FlightCard from './components/FlightCard';
@@ -17,6 +17,8 @@ export default function App() {
     const [view, setView] = useState('upcoming');
     const [menuOpen, setMenuOpen] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [showBookingInput, setShowBookingInput] = useState(false);
+    const [bookingId, setBookingId] = useState('');
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -65,6 +67,40 @@ export default function App() {
             } else {
                 alert('Could not parse PDF');
             }
+        }
+    };
+
+    const handleBookingFetch = async (e) => {
+        e.preventDefault();
+        if (!bookingId.trim()) return;
+
+        setLoading(true);
+        setShowBookingInput(false);
+        setMenuOpen(false);
+        try {
+            const booking = await fetchBooking(bookingId);
+            if (booking) {
+                // Fetch weather for the new booking
+                const depWeather = await fetchWeather(booking.departure.city);
+                const arrWeather = await fetchWeather(booking.arrival.city);
+                const fullBooking = {
+                    ...booking,
+                    departure: { ...booking.departure, ...depWeather },
+                    arrival: { ...booking.arrival, ...arrWeather }
+                };
+
+                setFlights(prev => [fullBooking, ...prev]);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+                setBookingId('');
+            } else {
+                alert('Booking not found or invalid ID');
+            }
+        } catch (error) {
+            console.error("Error fetching booking:", error);
+            alert('Error fetching booking details');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -131,6 +167,10 @@ export default function App() {
                                 <div className="bg-rose-100 p-2 rounded-xl text-rose-600"><FileText size={20} /></div>
                                 <span className="text-sm font-bold text-gray-700">Import PDF Ticket</span>
                             </button>
+                         <button onClick={() => { setShowBookingInput(true); setMenuOpen(false); }} className="flex items-center gap-4 bg-white px-5 py-3.5 rounded-2xl shadow-xl border border-gray-100 animate-in slide-in-from-bottom-2 duration-300">
+                            <div className="bg-purple-100 p-2 rounded-xl text-purple-600"><Ticket size={20} /></div>
+                            <span className="text-sm font-bold text-gray-700">Add Booking ID</span>
+                        </button>
                             <input
                                 type="file"
                                 ref={fileInputRef}
@@ -148,6 +188,32 @@ export default function App() {
             </nav>
             {showScanner && <ScannerModal onClose={() => setShowScanner(false)} onScanComplete={handleScanComplete} />}
             {selectedQRFlight && <BoardingPassQRModal flight={selectedQRFlight} onClose={() => setSelectedQRFlight(null)} />}
+
+        {showBookingInput && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
+                <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                    <h2 className="text-xl font-bold mb-4">Add Booking</h2>
+                    <form onSubmit={handleBookingFetch} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Booking Reference / PNR</label>
+                            <input
+                                type="text"
+                                value={bookingId}
+                                onChange={(e) => setBookingId(e.target.value)}
+                                placeholder="e.g. R4ND0M"
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase font-mono"
+                                autoFocus
+                            />
+                            <p className="text-xs text-gray-400 mt-2">Enter your 6-character Amadeus PNR or Booking ID.</p>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button type="button" onClick={() => setShowBookingInput(false)} className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+                            <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all">Add Trip</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
             <style>{`
             @keyframes fly-arc {
               0% { offset-distance: 0%; opacity: 0; }

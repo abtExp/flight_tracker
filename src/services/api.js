@@ -3,6 +3,8 @@ import { INITIAL_FLIGHTS } from '../data/mockData';
 const AVIATIONSTACK_API_KEY = import.meta.env.VITE_AVIATIONSTACK_API_KEY;
 const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
 const AMADEUS_CLIENT_ID = import.meta.env.VITE_AMADEUS_CLIENT_ID;
+// WARNING: Exposing the Client Secret in the frontend is a security risk and should only be done for prototyping.
+// In a production environment, this should be handled by a backend proxy.
 const AMADEUS_CLIENT_SECRET = import.meta.env.VITE_AMADEUS_CLIENT_SECRET;
 
 const AVIATIONSTACK_BASE_URL = 'http://api.aviationstack.com/v1';

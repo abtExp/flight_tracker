@@ -33,3 +33,7 @@
 
 ## 7. Security & Compliance
 *   **Requirement**: Handling PNRs and passenger names requires compliance with privacy regulations (GDPR, CCPA).
+*   **Critical Security Gap**: The current prototype exposes the **Amadeus API Client Secret** in the frontend code (`src/services/api.js` via `VITE_AMADEUS_CLIENT_SECRET`).
+    *   **Risk**: This allows any user to extract the credentials and abuse the API quota.
+    *   **CORS Issue**: Direct calls from the browser to Amadeus API may be blocked by Cross-Origin Resource Sharing (CORS) policies.
+    *   **Solution**: In a real-world application, **NEVER** expose secrets in the frontend. You must implement a backend server (Node.js, Go, etc.) or a serverless function (AWS Lambda, Vercel Functions) to handle authentication and proxy requests to the Amadeus API. The frontend should only communicate with your backend.
