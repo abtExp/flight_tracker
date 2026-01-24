@@ -2,9 +2,198 @@ import { INITIAL_FLIGHTS } from '../data/mockData';
 
 const AVIATIONSTACK_API_KEY = import.meta.env.VITE_AVIATIONSTACK_API_KEY;
 const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
+const AMADEUS_CLIENT_ID = import.meta.env.VITE_AMADEUS_CLIENT_ID;
+// WARNING: Exposing the Client Secret in the frontend is a security risk and should only be done for prototyping.
+// In a production environment, this should be handled by a backend proxy.
+const AMADEUS_CLIENT_SECRET = import.meta.env.VITE_AMADEUS_CLIENT_SECRET;
 
 const AVIATIONSTACK_BASE_URL = 'http://api.aviationstack.com/v1';
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
+const AMADEUS_BASE_URL = 'https://test.api.amadeus.com';
+
+let amadeusToken = null;
+let amadeusTokenExpiry = null;
+
+const getAmadeusToken = async () => {
+    if (amadeusToken && amadeusTokenExpiry && new Date() < amadeusTokenExpiry) {
+        return amadeusToken;
+    }
+
+    if (!AMADEUS_CLIENT_ID || !AMADEUS_CLIENT_SECRET || AMADEUS_CLIENT_ID.includes('your_')) {
+        console.warn('Amadeus API credentials missing or invalid.');
+        return null;
+    }
+
+    try {
+        const response = await fetch(`${AMADEUS_BASE_URL}/v1/security/oauth2/token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `grant_type=client_credentials&client_id=${AMADEUS_CLIENT_ID}&client_secret=${AMADEUS_CLIENT_SECRET}`
+        });
+
+        if (!response.ok) {
+            throw new Error(`Amadeus Auth Error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        amadeusToken = data.access_token;
+        // Expires in is in seconds. Subtract a buffer (e.g., 60s)
+        amadeusTokenExpiry = new Date(new Date().getTime() + (data.expires_in - 60) * 1000);
+        return amadeusToken;
+    } catch (error) {
+        console.error('Failed to authenticate with Amadeus:', error);
+        return null;
+    }
+};
+
+const fetchAmadeusFlightStatus = async (airlineCode, flightNum, dateStr) => {
+    const token = await getAmadeusToken();
+    if (!token) return null;
+
+    try {
+        // Amadeus On-Demand Flight Status
+        // dateStr should be YYYY-MM-DD
+        const url = `${AMADEUS_BASE_URL}/v2/schedule/flights?carrierCode=${airlineCode}&flightNumber=${flightNum}&scheduledDepartureDate=${dateStr}`;
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            console.error('Amadeus Flight Status Error:', response.status, response.statusText);
+            return null;
+        }
+
+        const data = await response.json();
+        if (!data.data || data.data.length === 0) return null;
+
+        // Amadeus returns a list of flight points. We need to map it.
+        return transformAmadeusFlightData(data.data[0]);
+
+    } catch (error) {
+        console.error('Error fetching Amadeus flight status:', error);
+        return null;
+    }
+};
+
+const fetchAmadeusBooking = async (bookingId) => {
+    const token = await getAmadeusToken();
+    if (!token) return null;
+
+    try {
+        const url = `${AMADEUS_BASE_URL}/v1/booking/flight-orders/${bookingId}`;
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+             console.error('Amadeus Booking Error:', response.status, response.statusText);
+             return null;
+        }
+
+        const data = await response.json();
+        if (!data.data) return null;
+
+        return transformAmadeusBookingData(data.data);
+
+    } catch (error) {
+        console.error('Error fetching Amadeus booking:', error);
+        return null;
+    }
+};
+
+const transformAmadeusFlightData = (flight) => {
+    // Mapping Amadeus data to internal format
+    const leg = flight.legs ? flight.legs[0] : {};
+    const departureDate = new Date(leg.scheduledDepartureTime);
+    const arrivalDate = new Date(leg.scheduledArrivalTime);
+
+    return {
+        id: (flight.type || 'flight') + (flight.flightNumber || Math.random()),
+        pnr: 'AMADEUS',
+        airline: flight.flightDesignator.carrierCode,
+        flightNumber: `${flight.flightDesignator.carrierCode} ${flight.flightDesignator.flightNumber}`,
+        departure: {
+            code: leg.boardPointIataCode,
+            city: leg.boardPointIataCode,
+            terminal: leg.boardPointTerminal || 'TBD',
+            gate: leg.boardPointGate || 'TBD',
+            time: departureDate.toISOString(),
+            weather: 'sun',
+            temp: '--'
+        },
+        arrival: {
+            code: leg.offPointIataCode,
+            city: leg.offPointIataCode,
+            terminal: leg.offPointTerminal || 'TBD',
+            time: arrivalDate.toISOString(),
+            weather: 'sun',
+            temp: '--'
+        },
+        seat: 'N/A',
+        zone: 'N/A',
+        class: 'Economy',
+        classType: 'economy',
+        airplane: leg.aircraftEquipment ? leg.aircraftEquipment.aircraftType : 'Unknown',
+        status: 'Scheduled',
+        loyalty: 'N/A',
+        passenger: 'User',
+        brandGradient: 'from-blue-600 to-blue-900',
+        logo: '✈️'
+    };
+};
+
+const transformAmadeusBookingData = (booking) => {
+    // Transform booking to flight object (picking the first flight segment)
+    if (!booking.flightOffers || booking.flightOffers.length === 0) return null;
+
+    const flightOffer = booking.flightOffers[0];
+    const itinerary = flightOffer.itineraries[0];
+    const segment = itinerary.segments[0];
+
+    const departureDate = new Date(segment.departure.at);
+    const arrivalDate = new Date(segment.arrival.at);
+
+    return {
+        id: booking.id,
+        pnr: booking.id,
+        airline: segment.carrierCode,
+        flightNumber: `${segment.carrierCode} ${segment.number}`,
+        departure: {
+            code: segment.departure.iataCode,
+            city: segment.departure.iataCode,
+            terminal: segment.departure.terminal || 'TBD',
+            gate: 'TBD',
+            time: departureDate.toISOString(),
+            weather: 'sun',
+            temp: '--'
+        },
+        arrival: {
+            code: segment.arrival.iataCode,
+            city: segment.arrival.iataCode,
+            terminal: segment.arrival.terminal || 'TBD',
+            time: arrivalDate.toISOString(),
+            weather: 'sun',
+            temp: '--'
+        },
+        seat: 'TBD',
+        zone: 'TBD',
+        class: flightOffer.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.cabin || 'Economy',
+        classType: 'economy',
+        airplane: segment.aircraft?.code || 'Unknown',
+        status: 'Confirmed',
+        loyalty: 'N/A',
+        passenger: booking.travelers && booking.travelers.length > 0 ? `${booking.travelers[0].name.firstName} ${booking.travelers[0].name.lastName}` : 'User',
+        brandGradient: 'from-green-600 to-green-900',
+        logo: '🎟️'
+    };
+};
 
 export const fetchFlights = async () => {
     if (!AVIATIONSTACK_API_KEY || AVIATIONSTACK_API_KEY.includes('your_')) {
@@ -36,7 +225,19 @@ export const fetchFlights = async () => {
     }
 };
 
+export const fetchBooking = async (bookingId) => {
+    // Logic to fetch booking. If Amadeus ID, use Amadeus.
+    // Since we only integrated Amadeus for booking retrieval by ID:
+    return await fetchAmadeusBooking(bookingId);
+};
+
 export const fetchFlightStatus = async (airlineCode, flightNum, dateStr) => {
+    // Try Amadeus first if keys are available
+    if (AMADEUS_CLIENT_ID && AMADEUS_CLIENT_SECRET && !AMADEUS_CLIENT_ID.includes('your_')) {
+        const amadeusData = await fetchAmadeusFlightStatus(airlineCode, flightNum, dateStr);
+        if (amadeusData) return amadeusData;
+    }
+
     if (!AVIATIONSTACK_API_KEY || AVIATIONSTACK_API_KEY.includes('your_')) {
         return null;
     }

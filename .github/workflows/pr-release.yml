@@ -1,0 +1,65 @@
+name: Build and Release Android App
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web App
+        run: npm run build
+        env:
+          VITE_AMADEUS_CLIENT_ID: ${{ secrets.VITE_AMADEUS_CLIENT_ID }}
+          VITE_AMADEUS_CLIENT_SECRET: ${{ secrets.VITE_AMADEUS_CLIENT_SECRET }}
+          VITE_AVIATIONSTACK_API_KEY: ${{ secrets.VITE_AVIATIONSTACK_API_KEY }}
+          VITE_OPENWEATHER_API_KEY: ${{ secrets.VITE_OPENWEATHER_API_KEY }}
+
+      - name: Bump Version
+        id: bump_version
+        run: node scripts/bump-version.cjs
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Android Release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Commit Version Bump
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bump version [skip ci]"
+          file_pattern: "package.json android/app/build.gradle"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-unsigned
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
