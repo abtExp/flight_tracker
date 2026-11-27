@@ -4,10 +4,12 @@ import {
     Share2, Map, Crown, Award, Armchair
 } from 'lucide-react';
 import { formatDate, getWeatherIcon } from '../utils/helpers';
+import { getAirlineAssets } from '../utils/airlineAssets';
 
 const FlightCard = ({ flight, isFeatured, onQRClick }) => {
     const { time: depTime, date: depDate } = formatDate(flight.departure.time);
     const { time: arrTime } = formatDate(flight.arrival.time);
+    const assets = getAirlineAssets(flight.airline, flight.flightNumber);
 
     const getTimeStatus = () => {
         if (flight.status === 'Boarding') return 'Boarding Now';
@@ -25,16 +27,21 @@ const FlightCard = ({ flight, isFeatured, onQRClick }) => {
 
     return (
         <div className={`relative w-full mb-16 transition-all duration-700 ease-in-out transform ${isFeatured ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-100'}`}>
-            <div className="rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] bg-white ring-1 ring-black/5 relative z-10">
+            <div className="rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] bg-white dark:bg-[#1E293B] ring-1 ring-black/5 dark:ring-white/5 relative z-10 transition-colors duration-300">
 
                 {/* TOP SECTION */}
-                <div className={`relative px-5 sm:px-7 pt-6 sm:pt-7 pb-6 sm:pb-8 bg-gradient-to-br ${flight.brandGradient} text-white overflow-hidden`}>
-                    <div className="absolute -right-10 -top-12 text-[150px] sm:text-[200px] opacity-[0.25] rotate-[15deg] select-none pointer-events-none mix-blend-overlay">{flight.logo}</div>
+                <div className={`relative px-5 sm:px-7 pt-6 sm:pt-7 pb-6 sm:pb-8 bg-gradient-to-br ${assets.gradient} text-white overflow-hidden`}>
+                    {/* ... (keep top section content as is, it's already white text on gradient) ... */}
+                    <div className="absolute -right-10 -top-12 text-[150px] sm:text-[200px] opacity-[0.25] rotate-[15deg] select-none pointer-events-none mix-blend-overlay">
+                        {assets.logo.startsWith('http') ? <img src={assets.logo} alt="" className="w-40 h-40 object-contain grayscale brightness-200" /> : assets.logo}
+                    </div>
 
                     <div className="relative flex justify-between items-start mb-6">
                         <div className="flex flex-col gap-1.5 flex-1 mr-4">
                             <div className="flex items-center flex-wrap gap-2">
-                                <span className="text-xl leading-none">{flight.logo}</span>
+                                <span className="text-xl leading-none">
+                                    {assets.logo.startsWith('http') ? <img src={assets.logo} alt="Logo" className="w-8 h-8 object-contain bg-white/90 rounded-full p-0.5" /> : assets.logo}
+                                </span>
                                 <span className="font-bold tracking-wide text-lg whitespace-nowrap">{flight.airline}</span>
                                 <span className="bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border border-white/10">{flight.flightNumber}</span>
                             </div>
@@ -104,34 +111,34 @@ const FlightCard = ({ flight, isFeatured, onQRClick }) => {
                 </div>
 
                 {/* BOTTOM SECTION */}
-                <div className="relative bg-white px-5 sm:px-7 pb-6 pt-6">
+                <div className="relative bg-white dark:bg-[#1E293B] px-5 sm:px-7 pb-6 pt-6 transition-colors duration-300">
                     <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-7">
-                        <div className="flex flex-col justify-center items-center p-2 sm:p-3 rounded-2xl bg-gray-50 border border-gray-100 h-20 sm:h-24">
-                            <span className="text-[9px] sm:text-[10px] uppercase text-gray-400 font-extrabold tracking-widest mb-1.5">Gate</span>
-                            <span className="text-2xl sm:text-3xl font-black text-gray-900 leading-none">{flight.departure.gate}</span>
-                            <span className="text-[8px] sm:text-[9px] font-bold text-gray-500 mt-1 sm:mt-2 uppercase bg-white px-1.5 sm:px-2 py-0.5 rounded border border-gray-200 shadow-sm">Term {flight.departure.terminal}</span>
+                        <div className="flex flex-col justify-center items-center p-2 sm:p-3 rounded-2xl bg-gray-50 dark:bg-[#0F172A] border border-gray-100 dark:border-gray-700/50 h-20 sm:h-24 transition-colors duration-300">
+                            <span className="text-[9px] sm:text-[10px] uppercase text-gray-400 dark:text-gray-400 font-extrabold tracking-widest mb-1.5">Gate</span>
+                            <span className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white leading-none">{flight.departure.gate}</span>
+                            <span className="text-[8px] sm:text-[9px] font-bold text-gray-500 dark:text-gray-400 mt-1 sm:mt-2 uppercase bg-white dark:bg-[#1E293B] px-1.5 sm:px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-300">Term {flight.departure.terminal}</span>
                         </div>
-                        <div className="flex flex-col justify-center items-center p-2 sm:p-3 rounded-2xl bg-gray-50 border border-gray-100 h-20 sm:h-24">
-                            <span className="text-[9px] sm:text-[10px] uppercase text-gray-400 font-extrabold tracking-widest mb-1.5">Seat</span>
-                            <span className="text-2xl sm:text-3xl font-black text-gray-900 leading-none">{flight.seat}</span>
+                        <div className="flex flex-col justify-center items-center p-2 sm:p-3 rounded-2xl bg-gray-50 dark:bg-[#0F172A] border border-gray-100 dark:border-gray-700/50 h-20 sm:h-24 transition-colors duration-300">
+                            <span className="text-[9px] sm:text-[10px] uppercase text-gray-400 dark:text-gray-400 font-extrabold tracking-widest mb-1.5">Seat</span>
+                            <span className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white leading-none">{flight.seat}</span>
                         </div>
-                        <div className="flex flex-col justify-center items-center p-2 sm:p-3 rounded-2xl bg-gray-50 border border-gray-100 h-20 sm:h-24">
-                            <span className="text-[9px] sm:text-[10px] uppercase text-gray-400 font-extrabold tracking-widest mb-1.5">Zone</span>
-                            <span className="text-2xl sm:text-3xl font-black text-gray-900 leading-none">{flight.zone}</span>
+                        <div className="flex flex-col justify-center items-center p-2 sm:p-3 rounded-2xl bg-gray-50 dark:bg-[#0F172A] border border-gray-100 dark:border-gray-700/50 h-20 sm:h-24 transition-colors duration-300">
+                            <span className="text-[9px] sm:text-[10px] uppercase text-gray-400 dark:text-gray-400 font-extrabold tracking-widest mb-1.5">Zone</span>
+                            <span className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white leading-none">{flight.zone}</span>
                         </div>
                     </div>
-                    <div className="flex justify-between items-end border-t border-gray-100 pt-5">
+                    <div className="flex justify-between items-end border-t border-gray-100 dark:border-gray-700/50 pt-5">
                         <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-2 mb-0.5"><User size={12} className="text-gray-400" /><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Passenger</span></div>
-                            <span className="text-sm font-bold text-gray-900 leading-none">{flight.passenger}</span>
-                            {flight.loyalty && <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md mt-2 w-fit">{flight.loyalty}</span>}
+                            <div className="flex items-center gap-2 mb-0.5"><User size={12} className="text-gray-400 dark:text-gray-500" /><span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">Passenger</span></div>
+                            <span className="text-sm font-bold text-gray-900 dark:text-white leading-none">{flight.passenger}</span>
+                            {flight.loyalty && <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md mt-2 w-fit">{flight.loyalty}</span>}
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="p-2.5 bg-gray-50 rounded-full text-gray-400 hover:text-blue-600 transition-colors"><Map size={18} /></button>
-                            <button className="p-2.5 bg-gray-50 rounded-full text-gray-400 hover:text-blue-600 transition-colors"><Share2 size={18} /></button>
+                            <button className="p-2.5 bg-gray-50 dark:bg-[#0F172A] rounded-full text-gray-400 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><Map size={18} /></button>
+                            <button className="p-2.5 bg-gray-50 dark:bg-[#0F172A] rounded-full text-gray-400 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><Share2 size={18} /></button>
                             <button onClick={() => onQRClick(flight)} className="flex flex-col items-end group/qr cursor-pointer hover:opacity-80 pl-2">
-                                <QrCode className="text-gray-900 mb-1" size={36} />
-                                <span className="text-[9px] font-mono text-gray-400 tracking-widest">PNR: {flight.pnr}</span>
+                                <QrCode className="text-gray-900 dark:text-white mb-1" size={36} />
+                                <span className="text-[9px] font-mono text-gray-400 dark:text-gray-500 tracking-widest">PNR: {flight.pnr}</span>
                             </button>
                         </div>
                     </div>

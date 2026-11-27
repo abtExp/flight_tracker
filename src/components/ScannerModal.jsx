@@ -12,12 +12,13 @@ const ScannerModal = ({ onClose, onScanComplete }) => {
         scannerRef.current = scanner;
 
         const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: window.innerWidth / window.innerHeight
+            fps: 15, // Increased framerate
+            qrbox: { width: 280, height: 280 }, // Matched to UI overlay (w-72 = 288px)
+            // aspectRatio: window.innerWidth / window.innerHeight // Removed to prevent forced digital zoom/crop
         };
 
         // Start scanning immediately with back camera
+        // Simplified constraints to avoid "OverconstrainedError" or black screen
         scanner.start(
             { facingMode: "environment" },
             config,
@@ -25,6 +26,7 @@ const ScannerModal = ({ onClose, onScanComplete }) => {
             onScanFailure
         ).catch(err => {
             console.error("Error starting scanner", err);
+            alert(`Camera Error: ${err}`); // Visible feedback for debugging
         });
 
         function onScanSuccess(decodedText, decodedResult) {
@@ -93,12 +95,14 @@ const ScannerModal = ({ onClose, onScanComplete }) => {
                         </p>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center animate-in zoom-in duration-300 z-30 relative">
-                        <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.6)] mb-6">
-                            <CheckCircle size={48} className="text-white" strokeWidth={3} />
+                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="flex flex-col items-center justify-center animate-in zoom-in duration-300 p-8 rounded-3xl">
+                            <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.6)] mb-6 animate-bounce">
+                                <CheckCircle size={48} className="text-white" strokeWidth={3} />
+                            </div>
+                            <h3 className="text-3xl font-black text-white mb-2 drop-shadow-lg text-center">Scan Complete</h3>
+                            <p className="text-white/80 font-medium text-lg drop-shadow-md text-center">Processing flight details...</p>
                         </div>
-                        <h3 className="text-3xl font-black text-white mb-2 drop-shadow-lg">Scan Complete</h3>
-                        <p className="text-white/80 font-medium text-lg drop-shadow-md">Processing flight details...</p>
                     </div>
                 )}
             </div>

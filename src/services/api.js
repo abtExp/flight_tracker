@@ -36,7 +36,18 @@ export const fetchFlights = async () => {
     }
 };
 
+import { fetchAmadeusFlightStatus } from './amadeus';
+
+// ... (keep existing imports/code)
+
 export const fetchFlightStatus = async (airlineCode, flightNum, dateStr) => {
+    // 1. Try Amadeus First (High Quality)
+    const amadeusData = await fetchAmadeusFlightStatus(airlineCode, flightNum, dateStr);
+    if (amadeusData) {
+        return amadeusData;
+    }
+
+    // 2. Fallback to AviationStack (Existing Logic)
     if (!AVIATIONSTACK_API_KEY || AVIATIONSTACK_API_KEY.includes('your_')) {
         return null;
     }

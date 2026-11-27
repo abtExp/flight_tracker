@@ -13,6 +13,8 @@
     "@capacitor/android": "^8.0.1",
     "@capacitor/cli": "^8.0.1",
     "@capacitor/core": "^8.0.1",
+    "@capacitor/preferences": "^8.0.0",
+    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
     "bcbp": "^6.0.2",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.344.0",
